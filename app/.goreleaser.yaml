@@ -1,0 +1,62 @@
+version: 2
+
+project_name: mcp-x
+
+# GoReleaser runs from the repository root so that it sees the git history and
+# the files packed into the archives; the Go module itself lives in app/.
+before:
+  hooks:
+    - go -C app mod tidy
+
+builds:
+  - id: mcp-x
+    dir: app
+    main: ./cmd/mcp-x
+    binary: mcp-x
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    # .Version is the git tag without the leading "v" — GoReleaser derives it
+    # from the tag being built, so the binary reports the same version as the
+    # release, the image and server.json.
+    ldflags:
+      - -s -w -X github.com/Role1776/mcp-x/app/internal/pkg/mcpserver.Version={{ .Version }}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - README.md
+      - LICENSE
+      - .env.example
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+
+release:
+  draft: false
+  prerelease: auto

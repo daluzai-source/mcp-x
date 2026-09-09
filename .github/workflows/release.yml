@@ -1,0 +1,146 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write   # create the GitHub release and upload assets
+  packages: write   # push to ghcr.io
+  id-token: write   # OIDC for the MCP Registry
+
+env:
+  # Pinned on purpose: the registry's ".../releases/latest/download/..." URL
+  # resolves to whatever shipped today, so a publisher change could break a
+  # release with no commit of ours in between.
+  MCP_PUBLISHER_VERSION: v1.8.1
+
+jobs:
+  # Tag pushes do not trigger ci.yml (it listens on branches and PRs), so the
+  # release gate re-runs the checks here. Nothing is published if they fail.
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: app/go.mod
+          cache-dependency-path: app/go.sum
+
+      - name: Verify dependencies
+        run: go mod verify
+        working-directory: app
+
+      - name: Vet
+        run: go vet ./...
+        working-directory: app
+
+      - name: Build
+        run: go build ./...
+        working-directory: app
+
+      - name: Test
+        run: go test -race ./...
+        working-directory: app
+
+  release:
+    name: release
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: app/go.mod
+          cache-dependency-path: app/go.sum
+
+      # A tag containing a hyphen (v0.1.0-rc1) is a prerelease: it gets binaries
+      # and an image, but must not move :latest or publish a registry entry.
+      - name: Resolve version
+        id: version
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          echo "value=$v" >> "$GITHUB_OUTPUT"
+          if [[ "$v" == *-* ]]; then
+            echo "stable=false" >> "$GITHUB_OUTPUT"
+            echo "tags=ghcr.io/role1776/mcp-x:$v" >> "$GITHUB_OUTPUT"
+          else
+            echo "stable=true" >> "$GITHUB_OUTPUT"
+            printf 'tags=%s\n' "ghcr.io/role1776/mcp-x:$v,ghcr.io/role1776/mcp-x:latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      # --- 1. binaries: GitHub Releases ---
+      # GoReleaser derives the version from the tag it is building, and the
+      # ldflags in .goreleaser.yaml stamp it into the binary.
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: "~> v2"
+          args: release --clean --config app/.goreleaser.yaml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # MCP Bundles let clients install the server with neither Docker nor a Go
+      # toolchain. They must be attached to the release before the registry
+      # runs, because it fetches each URL to verify the package exists.
+      - name: Build MCP bundles
+        run: scripts/build-mcpb.sh "${{ steps.version.outputs.value }}"
+
+      - name: Attach MCP bundles to the release
+        run: gh release upload "$GITHUB_REF_NAME" dist/mcpb/*.mcpb --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # --- 2. container image: ghcr.io ---
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: app
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.version.outputs.tags }}
+          build-args: |
+            VERSION=${{ steps.version.outputs.value }}
+
+      # --- 3. metadata: official MCP Registry ---
+      # Everything above is now published, so the registry can verify that each
+      # package really exists and that the image carries the ownership label.
+      - name: Sync version into server.json
+        if: steps.version.outputs.stable == 'true'
+        run: scripts/sync-server-json.sh "${{ steps.version.outputs.value }}"
+
+      - name: Install mcp-publisher
+        if: steps.version.outputs.stable == 'true'
+        run: |
+          curl -fsSL \
+            "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz" \
+            | tar xz mcp-publisher
+          sudo mv mcp-publisher /usr/local/bin/
+
+      # `publish` has no --dry-run flag; `validate` is the offline equivalent
+      # and reports every schema and semantic problem at once, so a malformed
+      # server.json fails here rather than halfway through publishing.
+      - name: Validate server.json
+        if: steps.version.outputs.stable == 'true'
+        run: mcp-publisher validate server.json
+
+      - name: Publish to the MCP Registry
+        if: steps.version.outputs.stable == 'true'
+        run: |
+          mcp-publisher login github-oidc
+          mcp-publisher publish

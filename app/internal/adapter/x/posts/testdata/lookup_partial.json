@@ -1,0 +1,17 @@
+{
+  "data": [
+    {"id": "1800000000000000001", "text": "It exists", "author_id": "44196397"}
+  ],
+  "includes": {
+    "users": [{"id": "44196397", "name": "Elon Musk", "username": "elonmusk"}]
+  },
+  "errors": [
+    {
+      "resource_id": "1800000000000000002",
+      "resource_type": "tweet",
+      "title": "Not Found Error",
+      "detail": "Could not find tweet with ids: [1800000000000000002].",
+      "type": "https://api.twitter.com/2/problems/resource-not-found"
+    }
+  ]
+}

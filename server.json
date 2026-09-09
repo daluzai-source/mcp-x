@@ -1,0 +1,339 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Role1776/mcp-x",
+  "title": "X (Twitter)",
+  "description": "Search, read and publish X posts and manage users, lists and media via the X API v2.",
+  "websiteUrl": "https://github.com/Role1776/mcp-x#readme",
+  "repository": {
+    "url": "https://github.com/Role1776/mcp-x",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "oci",
+      "identifier": "ghcr.io/role1776/mcp-x:0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "X_API_KEY",
+          "description": "OAuth 1.0a consumer key. developer.x.com -> your project -> your app -> Keys and tokens.",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "X_API_KEY_SECRET",
+          "description": "OAuth 1.0a consumer secret, issued together with X_API_KEY.",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "X_ACCESS_TOKEN",
+          "description": "User access token. Set the app permissions to Read and Write BEFORE generating it: a token keeps the permissions it was created with, and a read-only one fails every write until it is regenerated.",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "X_ACCESS_TOKEN_SECRET",
+          "description": "User access token secret, issued together with X_ACCESS_TOKEN.",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "MEDIA_ROOT",
+          "description": "Absolute path to the only directory x_media_upload may read files from. Anything outside it is refused, symlinks included.",
+          "isRequired": true,
+          "isSecret": false,
+          "format": "filepath",
+          "placeholder": "/tmp/mcp-x-media"
+        },
+        {
+          "name": "MCP_TRANSPORT",
+          "description": "stdio (client spawns the process) or http (streamable HTTP listener).",
+          "isRequired": false,
+          "isSecret": false,
+          "default": "stdio",
+          "choices": ["stdio", "http"]
+        },
+        {
+          "name": "MCP_NAME",
+          "description": "Server name reported in the MCP initialize handshake.",
+          "isRequired": false,
+          "isSecret": false,
+          "default": "mcp-x"
+        },
+        {
+          "name": "MCP_PATH",
+          "description": "HTTP path the MCP endpoint is served on. Used only when MCP_TRANSPORT=http.",
+          "isRequired": false,
+          "isSecret": false,
+          "default": "/mcp"
+        },
+        {
+          "name": "SERVER_PORT",
+          "description": "TCP port to listen on. Used only when MCP_TRANSPORT=http.",
+          "isRequired": false,
+          "isSecret": false,
+          "default": "8080"
+        },
+        {
+          "name": "SERVER_READ_TIMEOUT",
+          "description": "HTTP read timeout as a Go duration. Used only when MCP_TRANSPORT=http.",
+          "isRequired": false,
+          "isSecret": false,
+          "default": "60s"
+        },
+        {
+          "name": "SERVER_WRITE_TIMEOUT",
+          "description": "HTTP write timeout as a Go duration. Used only when MCP_TRANSPORT=http.",
+          "isRequired": false,
+          "isSecret": false,
+          "default": "60s"
+        },
+        {
+          "name": "LOG_MODE",
+          "description": "local (text, debug) or prod (JSON, info). Logs go to stderr.",
+          "isRequired": false,
+          "isSecret": false,
+          "default": "local",
+          "choices": ["local", "prod"]
+        },
+        {
+          "name": "MAX_IDLE_CONNS_PER_HOST",
+          "description": "Idle connections the outbound HTTP client keeps per host.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "100"
+        },
+        {
+          "name": "X_DEBUG",
+          "description": "Log the raw requests sent to the X API. Verbose; the output can contain request details, so keep it off outside debugging.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "boolean",
+          "default": "false",
+          "choices": ["false", "true"]
+        },
+        {
+          "name": "POSTS_MAX_QUERIES",
+          "description": "Queries accepted in one x_posts_search or x_posts_count call.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "5"
+        },
+        {
+          "name": "POSTS_MAX_USERNAMES",
+          "description": "Usernames accepted in one x_posts_by_user call.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "5"
+        },
+        {
+          "name": "POSTS_MAX_IDS",
+          "description": "Post ids accepted in one x_posts_lookup call. The X API caps this at 100.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "100"
+        },
+        {
+          "name": "POSTS_DEFAULT_RESULTS",
+          "description": "Posts returned per query when the call does not ask for a count. Every post returned is billed.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "10"
+        },
+        {
+          "name": "POSTS_MAX_RESULTS",
+          "description": "Upper bound for posts per query. The X API caps this at 100.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "100"
+        },
+        {
+          "name": "POSTS_DEFAULT_DAYS",
+          "description": "How far back post searches look when the call does not say, in days.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "7"
+        },
+        {
+          "name": "POSTS_MAX_DAYS",
+          "description": "Furthest back a post search may look, in days. Recent search cannot exceed 7.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "7"
+        },
+        {
+          "name": "POSTS_DEFAULT_TIMEOUT_MS",
+          "description": "Timeout for a posts call in milliseconds when the call does not request one.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "15000"
+        },
+        {
+          "name": "POSTS_MIN_TIMEOUT_MS",
+          "description": "Lowest timeout a posts call may request, in milliseconds.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "2000"
+        },
+        {
+          "name": "POSTS_MAX_TIMEOUT_MS",
+          "description": "Highest timeout a posts call may request, in milliseconds.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "60000"
+        },
+        {
+          "name": "USERS_MAX_USERNAMES",
+          "description": "Usernames accepted in one x_users_lookup call. The X API caps this at 100.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "100"
+        },
+        {
+          "name": "USERS_MAX_IDS",
+          "description": "User ids accepted in one x_users_lookup call. The X API caps this at 100.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "100"
+        },
+        {
+          "name": "USERS_DEFAULT_RESULTS",
+          "description": "Users returned per page when the call does not ask for a count.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "100"
+        },
+        {
+          "name": "USERS_MAX_RESULTS",
+          "description": "Upper bound for users per page.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "1000"
+        },
+        {
+          "name": "USERS_DEFAULT_TIMEOUT_MS",
+          "description": "Timeout for a users call in milliseconds when the call does not request one.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "15000"
+        },
+        {
+          "name": "USERS_MIN_TIMEOUT_MS",
+          "description": "Lowest timeout a users call may request, in milliseconds.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "2000"
+        },
+        {
+          "name": "USERS_MAX_TIMEOUT_MS",
+          "description": "Highest timeout a users call may request, in milliseconds.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "60000"
+        },
+        {
+          "name": "LISTS_DEFAULT_RESULTS",
+          "description": "Items returned per list page when the call does not ask for a count.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "25"
+        },
+        {
+          "name": "LISTS_MAX_RESULTS",
+          "description": "Upper bound for items per list page. The X API caps this at 100.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "100"
+        },
+        {
+          "name": "LISTS_DEFAULT_TIMEOUT_MS",
+          "description": "Timeout for a lists call in milliseconds when the call does not request one.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "15000"
+        },
+        {
+          "name": "LISTS_MIN_TIMEOUT_MS",
+          "description": "Lowest timeout a lists call may request, in milliseconds.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "2000"
+        },
+        {
+          "name": "LISTS_MAX_TIMEOUT_MS",
+          "description": "Highest timeout a lists call may request, in milliseconds.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "60000"
+        },
+        {
+          "name": "MEDIA_CHUNK_BYTES",
+          "description": "Bytes per upload segment. The X APPEND endpoint caps a segment at 5 MB.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "4194304"
+        },
+        {
+          "name": "MEDIA_POLL_INTERVAL_MS",
+          "description": "How often the upload status is polled while X transcodes a video, in milliseconds.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "2000"
+        },
+        {
+          "name": "MEDIA_DEFAULT_TIMEOUT_MS",
+          "description": "Timeout for a whole upload in milliseconds when the call does not request one.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "120000"
+        },
+        {
+          "name": "MEDIA_MIN_TIMEOUT_MS",
+          "description": "Lowest timeout an upload may request, in milliseconds.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "5000"
+        },
+        {
+          "name": "MEDIA_MAX_TIMEOUT_MS",
+          "description": "Highest timeout an upload may request, in milliseconds.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number",
+          "default": "600000"
+        }
+      ]
+    }
+  ]
+}

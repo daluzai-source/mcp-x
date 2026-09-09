@@ -1,0 +1,40 @@
+{
+  "data": [
+    {
+      "id": "1800000000000000001",
+      "text": "Short post about Go https://t.co/abc",
+      "author_id": "44196397",
+      "created_at": "2026-05-01T10:00:00.000Z",
+      "lang": "en",
+      "conversation_id": "1800000000000000001",
+      "public_metrics": {"retweet_count": 12, "reply_count": 3, "like_count": 100, "quote_count": 1},
+      "entities": {
+        "urls": [
+          {"start": 20, "end": 43, "url": "https://t.co/abc", "expanded_url": "https://go.dev/blog"}
+        ]
+      },
+      "attachments": {"media_keys": ["3_1800000000000000009"]},
+      "referenced_tweets": [{"type": "replied_to", "id": "1799999999999999999"}]
+    },
+    {
+      "id": "1800000000000000002",
+      "text": "Truncated text that ends here…",
+      "author_id": "99999999",
+      "note_tweet": {"text": "The full long text of the note tweet, well past the 280 character cut."}
+    },
+    {
+      "id": "1800000000000000003",
+      "text": "Bare post with no optional fields"
+    }
+  ],
+  "includes": {
+    "users": [
+      {"id": "44196397", "name": "Elon Musk", "username": "elonmusk", "verified": true}
+    ],
+    "media": [
+      {"media_key": "3_1800000000000000009", "type": "photo", "url": "https://pbs.twimg.com/media/x.jpg"}
+    ]
+  },
+  "meta": {"result_count": 3, "next_token": "b26v89c19zqg8o3fpds1"},
+  "errors": []
+}

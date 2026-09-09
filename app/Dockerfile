@@ -1,0 +1,30 @@
+# syntax=docker/dockerfile:1
+
+FROM golang:1.26-alpine AS build
+
+WORKDIR /src
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+# Stamped from the git tag by the release workflow; "dev" for local builds.
+ARG VERSION=dev
+RUN CGO_ENABLED=0 go build -trimpath \
+    -ldflags="-s -w -X github.com/Role1776/mcp-x/app/internal/pkg/mcpserver.Version=${VERSION}" \
+    -o /out/mcp-x ./cmd/mcp-x
+
+FROM gcr.io/distroless/static-debian12:nonroot
+
+# Proves to the MCP Registry that this image belongs to the published server.
+# The value must match "name" in server.json exactly.
+LABEL io.modelcontextprotocol.server.name="io.github.Role1776/mcp-x"
+LABEL org.opencontainers.image.source="https://github.com/Role1776/mcp-x"
+LABEL org.opencontainers.image.licenses="MIT"
+
+COPY --from=build /out/mcp-x /mcp-x
+
+# stdio transport by default: the client spawns the container and talks over
+# stdin/stdout, so no port is exposed. Set MCP_TRANSPORT=http to serve over HTTP.
+ENTRYPOINT ["/mcp-x"]
