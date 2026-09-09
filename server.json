@@ -8,11 +8,11 @@
     "url": "https://github.com/Role1776/mcp-x",
     "source": "github"
   },
-  "version": "0.1.0",
+  "version": "0.1.1",
   "packages": [
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/role1776/mcp-x:0.1.0",
+      "identifier": "ghcr.io/role1776/mcp-x:0.1.1",
       "transport": {
         "type": "stdio"
       },
@@ -43,7 +43,7 @@
         },
         {
           "name": "MEDIA_ROOT",
-          "description": "Absolute path to the only directory x_media_upload may read files from. Anything outside it is refused, symlinks included.",
+          "description": "Absolute path to an existing directory - the only one x_media_upload may read files from. Anything outside it is refused, symlinks included. Checked at startup.",
           "isRequired": true,
           "isSecret": false,
           "format": "filepath",

@@ -298,3 +298,58 @@ func TestLoadFromEnvFile(t *testing.T) {
 		assert.Equal(t, "key", cfg.XClient.APIKey)
 	})
 }
+
+func TestLoadRejectsAMediaRootThatIsNotAnAbsoluteDirectory(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "not-a-directory")
+	require.NoError(t, os.WriteFile(file, []byte("x"), 0o600))
+
+	cases := []struct {
+		name        string
+		root        string
+		wantMessage string
+	}{
+		{
+			name:        "a relative path",
+			root:        "media",
+			wantMessage: "must be an absolute path",
+		},
+		{
+			name:        "a directory that does not exist",
+			root:        filepath.Join(t.TempDir(), "missing"),
+			wantMessage: "is not readable",
+		},
+		{
+			name:        "a regular file",
+			root:        file,
+			wantMessage: "is not a directory",
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			isolateEnv(t)
+			setRequired(t)
+			t.Setenv("MEDIA_ROOT", testCase.root)
+
+			cfg, err := Load("")
+
+			require.Error(t, err)
+			assert.Nil(t, cfg)
+			assert.Contains(t, err.Error(), "MEDIA_ROOT")
+			assert.Contains(t, err.Error(), testCase.wantMessage)
+		})
+	}
+}
+
+func TestLoadAcceptsAnExistingAbsoluteMediaRoot(t *testing.T) {
+	isolateEnv(t)
+	setRequired(t)
+
+	root := t.TempDir()
+	t.Setenv("MEDIA_ROOT", root)
+
+	cfg, err := Load("")
+
+	require.NoError(t, err)
+	assert.Equal(t, root, cfg.Media.Root)
+}

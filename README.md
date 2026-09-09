@@ -110,6 +110,8 @@ Before registering a single tool, the server calls `GET /2/users/me` once (`clie
 
 A failure here is fatal by design. A server that starts and then fails every call is worse than one that does not start.
 
+The cost of that choice is worth stating plainly: **there is no way to try this server without a funded X developer account.** No credentials means no startup, which means no tool list — `/mcp` and `claude mcp list` will show a failed connection and nothing else. To confirm an install short of that, run the binary with `-version`, and read the [Tools](#tools) section for what it would have exposed.
+
 ### Keys are secrets
 
 The four values are credentials for a live account with write access. Keep them in a file only you can read, pass it with `-env`, and never commit it — `.env` is gitignored, `.env.example` is the template. When running under an MCP client, the client's `env` block works too; it takes precedence over the `.env` file.
@@ -321,33 +323,46 @@ Pick whichever fits — all of them give the identical server.
 **Container** (no Go toolchain needed):
 
 ```bash
-docker pull ghcr.io/role1776/mcp-x:latest
+docker pull ghcr.io/role1776/mcp-x:0.1.1     # or :latest to track the newest release
 ```
+
+Pin an explicit version in anything you rely on. `:latest` moves on every stable release, and a release can add or change tool behaviour; [`server.json`](server.json) pins the same version the MCP Registry advertises.
 
 **Prebuilt binary** — grab the archive for your platform from the [latest release](https://github.com/Role1776/mcp-x/releases/latest), unpack it, and put `mcp-x` on your `PATH`.
 
-**MCP Bundle** — for clients that install `.mcpb` files, download `mcp-x_<version>_<os>_<arch>.mcpb` from the [latest release](https://github.com/Role1776/mcp-x/releases/latest) and open it with your client. The bundle carries the compiled binary, so it needs neither Docker nor Go. Pick the file matching your OS *and* CPU architecture: a bundle holds one native binary.
+**MCP Bundle** — for clients that install `.mcpb` files, download `mcp-x_<version>_<os>_<arch>.mcpb` from the [latest release](https://github.com/Role1776/mcp-x/releases/latest) and open it with your client. The bundle carries the compiled binary, so it needs neither Docker nor Go, and the client prompts for the five required values on install. Pick the file matching your OS *and* CPU architecture: a bundle holds one native binary.
 
-**From source:**
+> [!NOTE]
+> Bundles built before v0.1.1 declared no configuration fields, so the client never asked for the credentials and the server exited on startup every time. Use v0.1.1 or newer.
 
-```bash
-go install github.com/Role1776/mcp-x/app/cmd/mcp-x@latest   # needs Go 1.26+
-```
-
-Or build the binary in place (the Go module lives in `app/`):
+**From source** (needs Go 1.26+):
 
 ```bash
+git clone https://github.com/Role1776/mcp-x
+cd mcp-x
 make build          # -> bin/mcp-x
 ```
 
+`go install` also works, with one caveat worth knowing before you type it:
+
+```bash
+go install github.com/Role1776/mcp-x/app/cmd/mcp-x@latest
+```
+
+The Go module lives in `app/`, so the release tags (`v0.1.0`) do not name it — `@v0.1.0` fails outright and `@latest` resolves to a pseudo-version of the newest commit on `main`. A `go install` build also reports its version as `dev`, because the version is stamped in by the release pipeline and not by the module. For a build that matches a release exactly, use the prebuilt binary, the container, or `make build` from a checked-out tag.
+
 ### Configure
+
+From a clone, or from an unpacked release archive (both ship the template):
 
 ```bash
 cp .env.example .env
 $EDITOR .env        # fill in the four X_* keys and MEDIA_ROOT
 ```
 
-Five values are required; everything else has a default.
+Installing from the container or an `.mcpb` bundle gives you no checkout to copy from — take the template from [`.env.example`](.env.example), or skip the file entirely and pass the five values in your client's `env` block (below).
+
+Five values are required; everything else has a default. `MEDIA_ROOT` must be an **absolute path to a directory that already exists** — the server checks this at startup and refuses to start otherwise, rather than failing at the first upload.
 
 ### Run
 
@@ -357,6 +372,7 @@ Five values are required; everything else has a default.
 
 | Flag | Meaning |
 | :--- | :--- |
+| `-version` | Print the version the binary reports to MCP clients, and exit. Answerable without credentials, unlike the handshake. |
 | `-env` | Path to a `.env` file. **There is no implicit lookup** — under stdio the working directory is chosen by the MCP client, so a relative default would be unpredictable. If the flag is omitted, or the file does not exist, the server falls back to the ambient environment and says so on `stderr`; the five required values must still be set somewhere or startup fails. |
 
 A successful start logs the authenticated account:
@@ -368,7 +384,21 @@ INFO MCP server has started op=app.Run transport=stdio
 
 ### Connecting an MCP client (stdio)
 
-Point your client at the built binary. Example Claude Desktop config:
+**Claude Code** — one command, credentials inline (`--` separates the server's own command from the flags above it):
+
+```bash
+claude mcp add mcp-x \
+  -e X_API_KEY=... \
+  -e X_API_KEY_SECRET=... \
+  -e X_ACCESS_TOKEN=... \
+  -e X_ACCESS_TOKEN_SECRET=... \
+  -e MEDIA_ROOT=/absolute/path/to/media \
+  -- /absolute/path/to/mcp-x
+```
+
+Or point it at a `.env` file instead: `-- /absolute/path/to/mcp-x -env /absolute/path/to/.env`. Check the result with `claude mcp list`, or `/mcp` inside a session.
+
+**Claude Desktop** and other clients that take a JSON config — point them at the built binary:
 
 ```json
 {
@@ -417,7 +447,7 @@ Run the image on stdio. Docker needs each variable named on the command line wit
         "-e", "X_ACCESS_TOKEN_SECRET",
         "-e", "MEDIA_ROOT",
         "-v", "/host/media:/media:ro",
-        "ghcr.io/role1776/mcp-x:latest"
+        "ghcr.io/role1776/mcp-x:0.1.1"
       ],
       "env": {
         "X_API_KEY": "...",
@@ -431,7 +461,23 @@ Run the image on stdio. Docker needs each variable named on the command line wit
 }
 ```
 
-`-i` is required — without it the container gets no stdin and the client sees the server die immediately. Clients that install from the [MCP Registry](https://registry.modelcontextprotocol.io) build this invocation themselves and prompt for the variables declared in [`server.json`](server.json).
+`-i` is required — without it the container gets no stdin and the client sees the server die immediately. Clients that install *from the [MCP Registry](https://registry.modelcontextprotocol.io) itself* build this invocation themselves and prompt for the variables declared in [`server.json`](server.json) — that is a property of the client, not of every client that can talk to this server; Claude Code's CLI, for one, does not install from the registry, so use `claude mcp add` above.
+
+### When the client says the connection closed
+
+Under stdio the server's `stderr` belongs to the client, and most clients discard it. So a configuration problem that the server explains perfectly well in one line reaches you as nothing but:
+
+```
+✘ Failed to connect — -32000: Connection closed
+```
+
+**Run the binary by hand with the same environment to see the real reason:**
+
+```bash
+/absolute/path/to/mcp-x -env /absolute/path/to/.env
+```
+
+It prints exactly what is wrong — which variables are missing and where to get them, or that the keys were rejected, or that the access token is read-only — and exits. Almost every failed install is one of those three.
 
 ### Running over HTTP
 
@@ -456,7 +502,7 @@ See [`.env.example`](.env.example) for the full list at its default values, read
 | `X_API_KEY_SECRET` | OAuth 1.0a consumer secret. |
 | `X_ACCESS_TOKEN` | User access token — [generate it *after* setting Read and Write](#credentials). |
 | `X_ACCESS_TOKEN_SECRET` | User access token secret. |
-| `MEDIA_ROOT` | Absolute path to the only directory `x_media_upload` may read from. No default, on purpose. |
+| `MEDIA_ROOT` | Absolute path to the only directory `x_media_upload` may read from. Must exist and be a directory; both are checked at startup. No default, on purpose. |
 
 Missing any of them aborts startup with the list of what is missing plus a pointer to the Developer Console.
 

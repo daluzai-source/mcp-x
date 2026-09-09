@@ -62,7 +62,39 @@ while IFS=$'\t' read -r path goos goarch; do
         mcp_config: {
           command: ("${__dirname}/server/" + $binary),
           args: [],
-          env: {}
+          # Substituted by the host app from the answers to user_config below.
+          # Without this the server would start with no credentials and exit.
+          env: {
+            X_API_KEY: "${user_config.x_api_key}",
+            X_API_KEY_SECRET: "${user_config.x_api_key_secret}",
+            X_ACCESS_TOKEN: "${user_config.x_access_token}",
+            X_ACCESS_TOKEN_SECRET: "${user_config.x_access_token_secret}",
+            MEDIA_ROOT: "${user_config.media_root}"
+          }
+        }
+      },
+      # The five variables the server refuses to start without. Everything else
+      # has a default and is left to the .env file or the ambient environment.
+      user_config: {
+        x_api_key: {
+          type: "string", title: "API key", sensitive: true, required: true,
+          description: "OAuth 1.0a consumer key. developer.x.com -> your project -> your app -> Keys and tokens."
+        },
+        x_api_key_secret: {
+          type: "string", title: "API key secret", sensitive: true, required: true,
+          description: "OAuth 1.0a consumer secret, issued together with the API key."
+        },
+        x_access_token: {
+          type: "string", title: "Access token", sensitive: true, required: true,
+          description: "User access token. Set the app permissions to Read and Write BEFORE generating it: a token keeps the permissions it was created with, and a read-only one fails every write until it is regenerated."
+        },
+        x_access_token_secret: {
+          type: "string", title: "Access token secret", sensitive: true, required: true,
+          description: "User access token secret, issued together with the access token."
+        },
+        media_root: {
+          type: "directory", title: "Media directory", required: true,
+          description: "The only directory x_media_upload may read files from. Anything outside it is refused, symlinks included."
         }
       },
       compatibility: { platforms: [$platform] }

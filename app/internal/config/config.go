@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
@@ -62,7 +63,33 @@ func Load(envPath string) (*Config, error) {
 		return nil, describe(cfg, err)
 	}
 
+	if err := checkMediaRoot(cfg.Media.Root); err != nil {
+		return nil, err
+	}
+
 	return cfg, nil
+}
+
+// checkMediaRoot fails startup when MEDIA_ROOT is not what the documentation
+// promises. The path is the only boundary between an LLM and the host
+// filesystem, so a typo that silently resolves elsewhere - or a relative path
+// resolved against whatever directory the client happened to spawn us in - is
+// caught here rather than at the first upload.
+func checkMediaRoot(root string) error {
+	if !filepath.IsAbs(root) {
+		return fmt.Errorf("MEDIA_ROOT must be an absolute path, got %q", root)
+	}
+
+	info, err := os.Stat(root)
+	if err != nil {
+		return fmt.Errorf("MEDIA_ROOT %q is not readable: %w", root, err)
+	}
+
+	if !info.IsDir() {
+		return fmt.Errorf("MEDIA_ROOT %q is not a directory", root)
+	}
+
+	return nil
 }
 
 // describeParse turns the struct field names caarlos0/env reports back into the
