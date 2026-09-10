@@ -15,6 +15,7 @@
 </p>
 
 <p align="center">
+  <a href="https://varmcp.com/mcp-x">Website</a> ·
   <a href="#the-x-api-costs-money">Costs</a> ·
   <a href="#credentials">Credentials</a> ·
   <a href="#tools">Tools</a> ·
