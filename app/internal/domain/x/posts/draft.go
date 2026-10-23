@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	MaxTextLength     = 280
+	MaxTextLength     = 25000
 	MaxNoteTextLength = 4000
 	MaxDraftMedia     = 4
 
