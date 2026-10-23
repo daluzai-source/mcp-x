@@ -6,7 +6,7 @@ type Poll struct {
 }
 
 type CreateRequest struct {
-	Text          string   `json:"text,omitempty" jsonschema:"post text, at most 280 characters; required unless media_ids is set"`
+	Text          string   `json:"text,omitempty" jsonschema:"post text, at most 25000 characters (Premium long post); required unless media_ids is set"`
 	ReplyToID     string   `json:"reply_to_id,omitempty" jsonschema:"id of the post this one replies to"`
 	QuoteID       string   `json:"quote_id,omitempty" jsonschema:"id of the post to quote"`
 	MediaIDs      []string `json:"media_ids,omitempty" jsonschema:"1 to 4 media ids returned by x_media_upload" validate:"omitempty,max=4,dive,required"`
