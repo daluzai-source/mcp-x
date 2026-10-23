@@ -28,6 +28,7 @@ func InitClient(cfg *Config) (*gotwi.Client, error) {
 
 	httpClient := &http.Client{
 		Transport: &http.Transport{
+			Proxy:               http.ProxyFromEnvironment,
 			MaxIdleConnsPerHost: cfg.MaxIdleConnsPerHost,
 		},
 	}

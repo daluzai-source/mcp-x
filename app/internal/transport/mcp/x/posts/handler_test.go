@@ -135,7 +135,7 @@ func TestCreate(t *testing.T) {
 			name:        "text too long",
 			err:         x.ErrTextTooLong,
 			wantIsError: true,
-			wantText:    "post text exceeds 280 characters",
+			wantText:    "post text exceeds 25000 characters",
 		},
 		{
 			name:        "bad poll",

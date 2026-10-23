@@ -40,11 +40,6 @@ func TestNewDraftRejects(t *testing.T) {
 			wantErrIs: x.ErrTextTooLong,
 		},
 		{
-			name:      "long text without the note flag",
-			props:     DraftProps{Text: strings.Repeat("a", MaxNoteTextLength)},
-			wantErrIs: x.ErrTextTooLong,
-		},
-		{
 			name:      "more media than a post can carry",
 			props:     DraftProps{Text: "hi", MediaIDs: []string{mediaID, mediaID, mediaID, mediaID, mediaID}},
 			wantErrIs: x.ErrTooManyMedia,
@@ -137,6 +132,12 @@ func TestNewDraftAccepts(t *testing.T) {
 		{
 			name:  "a note post exactly at the note limit",
 			props: DraftProps{Text: strings.Repeat("a", MaxNoteTextLength), Note: true},
+		},
+		{
+			// Post limit (25000) now exceeds the note limit: note-length text
+			// without the note flag is accepted as a regular long post.
+			name:  "note-length text without the note flag",
+			props: DraftProps{Text: strings.Repeat("a", MaxNoteTextLength)},
 		},
 		{name: "media without text", props: DraftProps{MediaIDs: []string{mediaID}}},
 		{

@@ -3,10 +3,12 @@ package posts
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/Role1776/mcp-x/app/internal/domain/x"
+	domainposts "github.com/Role1776/mcp-x/app/internal/domain/x/posts"
 )
 
 func result(err error) *mcpsdk.CallToolResult {
@@ -66,7 +68,7 @@ func result(err error) *mcpsdk.CallToolResult {
 		message = "the media file is empty"
 
 	case errors.Is(err, x.ErrTextTooLong):
-		message = "post text exceeds 280 characters"
+		message = fmt.Sprintf("post text exceeds %d characters", domainposts.MaxTextLength)
 
 	case errors.Is(err, x.ErrEmptyText):
 		message = "a post needs text unless it carries media"
